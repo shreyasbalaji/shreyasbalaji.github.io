@@ -73,6 +73,9 @@ __________________________________________________ */
     font-size: 1.4em !important;
     background-color: #fff;
     background-color: rgba(255, 255, 255, 0.72); } }
+@media only screen and (max-width: 450px) {
+  .home-column-wrapper {
+    opacity: 0.0; } }
 @media only screen and (max-width: 399px) {
   .home-quote-wrapper {
     margin-right: -14%; }
@@ -88,7 +91,7 @@ __________________________________________________ */
     background-color: rgba(255, 255, 255, 0.72); } }
 @media only screen and (max-height: 740px) {
   .fthome {
-    margin-top: -170px; } }
+    margin-top: -180px; } }
 .ipad-text {
   display: none; }
 
