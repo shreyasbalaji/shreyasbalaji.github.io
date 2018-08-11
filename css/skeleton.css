@@ -30,7 +30,7 @@
 .container {
   position: relative;
   width: 100%;
-  max-width: 750px;
+  max-width: 750px; /* Important */
   margin: 0 auto;
   padding: 0 20px;
   box-sizing: border-box; }
@@ -39,6 +39,12 @@
   width: 100%;
   float: left;
   box-sizing: border-box; }
+
+/* sizing */
+article {
+  /* margin: auto; */
+  max-width: 650px;
+}
 
 /* For devices larger than 400px */
 @media (min-width: 400px) {

@@ -1,4 +1,342 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.7.3">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2018-07-25T01:31:53-04:00</updated><id>/</id><title type="html">Shreyas Balaji</title><subtitle>My personal website :)</subtitle><author><name>Shreyas Balaji</name></author><entry><title type="html">Freshman Year Thoughts</title><link href="/mit/freshman-year-thoughts/" rel="alternate" type="text/html" title="Freshman Year Thoughts" /><published>2018-05-25T22:57:11-04:00</published><updated>2018-05-25T22:57:11-04:00</updated><id>/mit/freshman-year-thoughts</id><content type="html" xml:base="/mit/freshman-year-thoughts/">&lt;p&gt;It’s strangely universal—how come May, students all around feel relief mixed with an acute sensation of ending, like that of a season passed—and they think to themselves &lt;em&gt;how the hell is the year already over.&lt;/em&gt; Yes, the year, for students from preschool through university consider their years from September through May. It’s a universal realization, and at the same time deeply personal.&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.7.3">Jekyll</generator><link href="https://shreyasbalaji.com/feed.xml" rel="self" type="application/atom+xml" /><link href="https://shreyasbalaji.com/" rel="alternate" type="text/html" /><updated>2018-08-11T01:54:25-04:00</updated><id>https://shreyasbalaji.com/</id><title type="html">Shreyas Balaji</title><subtitle>My personal website :)</subtitle><author><name>Shreyas Balaji</name></author><entry><title type="html">Parallel Buffered Read Writes</title><link href="https://shreyasbalaji.com/2018/08/09/parallel-buffered-read-writes" rel="alternate" type="text/html" title="Parallel Buffered Read Writes" /><published>2018-08-09T00:00:00-04:00</published><updated>2018-08-09T00:00:00-04:00</updated><id>https://shreyasbalaji.com/2018/08/09/parallel-buffered-read-writes</id><content type="html" xml:base="https://shreyasbalaji.com/2018/08/09/parallel-buffered-read-writes">&lt;p&gt;Until this summer, I’d never written a piece of code when file IO was the performance-limiting factor. Working with multi-terabyte datasets quickly disabused me of my innocence. It got to the point that I  was having to plan ahead to avoid unnecessary file copies.&lt;/p&gt;
+
+&lt;p&gt;If I weren’t considering making a living in data science, I’d have to wonder if the hassle is worth it. High-end modern servers run on multiple terabytes of RAM, so perhaps soon enough the disk will be obsolete. Barring that, I’ll take what performance gains I can get.&lt;/p&gt;
+
+&lt;p&gt;The single most important thing to do is &lt;em&gt;buffer&lt;/em&gt;. Buffering is essentially reading and writing &lt;em&gt;in bulk&lt;/em&gt;. It’s far more efficient to read a large file 64 kilobytes at a time than a character at a time. Most high-level languages somewhat transparently handle that for you, but of course at a low level it’s hard to beat the performance of properly buffered reads and writes into and out of byte buffers in a language like C/C++ or Java. The performance gain of buffering is mainly due to OS optimizations when you read/write large chunks of data sequentially from disk.&lt;/p&gt;
+
+&lt;p&gt;You can look up the details of why it works, but before proceeding, let’s prove the performance difference is real. We’ll do this by comparing the performance difference between reading a  file in java one byte at a time vs. 64Kb at a time, using the relatively low-level FileInputStream.&lt;/p&gt;
+
+&lt;figure class=&quot;highlight&quot;&gt;&lt;pre&gt;&lt;code class=&quot;language-java&quot; data-lang=&quot;java&quot;&gt;&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;throws&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;IOException&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;File&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;testFile&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;File&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;test.txt&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;    &lt;span class=&quot;c1&quot;&gt;// 100Gb of random text&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;FileInputStream&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;testStream&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;FileInputStream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;testFile&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;kt&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;testStream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;read&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;!=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;testStream&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;close&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/figure&gt;</content><author><name>Shreyas Balaji</name></author><summary type="html">Until this summer, I’d never written a piece of code when file IO was the performance-limiting factor. Working with multi-terabyte datasets quickly disabused me of my innocence. It got to the point that I was having to plan ahead to avoid unnecessary file copies.</summary></entry><entry><title type="html">The Duel</title><link href="https://shreyasbalaji.com/2018/08/09/the-duel" rel="alternate" type="text/html" title="The Duel" /><published>2018-08-09T00:00:00-04:00</published><updated>2018-08-09T00:00:00-04:00</updated><id>https://shreyasbalaji.com/2018/08/09/the-duel</id><content type="html" xml:base="https://shreyasbalaji.com/2018/08/09/the-duel">&lt;p&gt;When Eleanor Moreau threw a dinner party, everyone of note attended. There was a
+certain craft to being a hostess, and Eleanor had mastered it. She always seemed to know who
+would be in town—visiting socialites would have received invitations by post before they set
+out. Some attended for food, some for wine, and some for society. No one would say they
+attended for the surprise, for that would come far too close to the truth.&lt;/p&gt;
+
+&lt;p&gt;Wasteful, the women called it.&lt;/p&gt;
+
+&lt;p&gt;Women have their indulgences, the men shrugged.&lt;/p&gt;
+
+&lt;p&gt;Mrs. Moreau didn’t build her reputation as a hostess through some sort of understated
+competence; she reveled in it. There were a few other people who thought they could throw
+dinner parties, and she had to show them why they couldn’t compare. And so, at every party,
+there was a surprise.&lt;/p&gt;
+
+&lt;p&gt;She took great pleasure in planning her surprises, almost as much as in the notoriety they
+brought her. There was also the additional benefit of the company. Most of her feats required
+some form of theatrics, so she hired an actor to help her plan stage-ops. He went by the name of
+Richard, and he was a charming, well-educated fellow. With her husband away most of the time,
+one thing quickly led to another. She wondered if Richard didn’t have the better end of it; she
+thought herself a &lt;em&gt;far&lt;/em&gt; more engaging employer than those fusty Shakespearean troupes where
+most actors started off.&lt;/p&gt;
+
+&lt;p&gt;The nature of the surprise varied. Sometimes it was pink and feathery. People shrieked
+and babbled in amazement and fear, for in those days few but zoologists and Americans had ever
+heard of a flamingo. Two esteemed pastors in attendance found themselves at their wits end to
+make sense of the thing. It wasn’t quite white enough to be an angel of heaven, but seemed a tad
+brightly colored to be the devil incarnate. And yet the creature was too pink—too
+exotic—to be, as the landowners claimed, just a bird.&lt;/p&gt;
+
+&lt;p&gt;Sometimes it was wet and deep. You don’t see it in the history books, but Mrs. Moreau
+invented the indoor swimming pool. When push came to shove, the ladies refused to go in the
+water. The gentlemen declined even more politely, since most of them didn’t know how to swim.
+Eleanor had to coax them in with a floating island of Spanish vintage.&lt;/p&gt;
+
+&lt;p&gt;Sometimes it was sensual and serpentine. Just as the crowd approached a state of
+maximal intoxication, a cadre of eunuch snake-charmers materialized from what might as well
+been thin air. Attendees would swear they’d imagined the sibilant music, the herbal smoke, and
+the all-but-naked corded figures that danced fluid and inseparable from the snakes that writhed
+on and over them.&lt;/p&gt;
+
+&lt;p&gt;The scandalized reaction of the old hypocrites like Mrs. White made that last enterprise
+worthwhile in itself, but organizing it had been quite a challenge. First, she’d had to figure out
+where to import eunuch snake-charmers from—it turned out they were available only in a select
+number of countries, and England wasn’t one of them. The shipping charges had been atrocious,
+enough that even Eleanor’s husband had taken note.&lt;/p&gt;
+
+&lt;p&gt;“Honey, did you submit a withdrawal order for two thousand pounds while I was gone?”
+Gilbert had inquired.&lt;/p&gt;
+
+&lt;p&gt;“Yes, dear,” she’d replied.&lt;/p&gt;
+
+&lt;p&gt;“Two thousand pounds! My God!” he exclaimed.&lt;/p&gt;
+
+&lt;p&gt;“Yes, dear.”&lt;/p&gt;
+
+&lt;p&gt;“That’s a goddamn fucking ton.”&lt;/p&gt;
+
+&lt;p&gt;“Yes, dear.”&lt;/p&gt;
+
+&lt;p&gt;“Good grief, Eleanor, whatever for?” he cried. “Did you go and purchase a new estate?
+But they wouldn’t let you sign for land—you’d need my signature.”&lt;/p&gt;
+
+&lt;p&gt;“You know, I hired some performers. It was for the party I hosted the other weekend.”&lt;/p&gt;
+
+&lt;p&gt;“&lt;em&gt;Two thousand pounds&lt;/em&gt; for performers! Christ, you’ve been had. You’ve gone and gotten
+royally ripped off.”&lt;/p&gt;
+
+&lt;p&gt;“They were very good performers,” Eleanor said defensively. “You do realize that we
+can’t just bring any Tom, Dick, and Harry off the street for these things. We have a &lt;em&gt;reputation&lt;/em&gt; to
+maintain, after all.”&lt;/p&gt;
+
+&lt;p&gt;“You could bring in the &lt;em&gt;Vienna Symphony&lt;/em&gt; for two thousand pounds,” he said. She made
+to reply, but he cut her off with a gesture. His face seemed to contort and deflate, causing his
+mustache to bunch and bristle into itself.&lt;/p&gt;
+
+&lt;p&gt;“Very well,” he said. “I suppose it just goes to show you don’t have a head for business.
+Just &lt;em&gt;please&lt;/em&gt; try to be more careful in the future.”&lt;/p&gt;
+
+&lt;p&gt;She told Richard the story, afterwards. She had to hold him as he choked with laughter.&lt;/p&gt;
+
+&lt;p&gt;“Remind me why I work for you again,” he teased. “You don’t seem to have any sort of
+head for business, after all.”&lt;/p&gt;
+
+&lt;p&gt;“Of course not,” she agreed. “I pay you too much.”&lt;/p&gt;
+
+&lt;p&gt;“&lt;em&gt;Can’t bring any Tom, Dick, and Harry off the street for these things. We have a
+reputation to maintain.&lt;/em&gt;” Richard mimed. “Those eunuchs didn’t even speak English!”&lt;/p&gt;
+
+&lt;p&gt;“Did you notice how horrible their grammar was? Their childhood tutors must have been
+complete incompetents,” Eleanor replied. She suddenly grinned.&lt;/p&gt;
+
+&lt;p&gt;“I’ll admit, it was quite entertaining to watch you waving your hands like a maniac trying
+to make them follow directions,” she said. “It’s good to see you working hard after all the
+money I’m spending on you.”&lt;/p&gt;
+
+&lt;p&gt;She cupped her hand against his arm and let it linger as he stiffened. She
+leaned in, and they kissed.&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;One party there was no surprise, and it caused quite the commotion.&lt;/p&gt;
+
+&lt;p&gt;“That Gilbert must have finally decided to put a check on his wife’s spending,” Mrs.
+White sniffed. “About time too.”&lt;/p&gt;
+
+&lt;p&gt;Count Tybald was drunk and enraged. He’d been hearing Moreau party this, Moreau
+party that for nigh on eternity until he’d finally decided to get on a carriage and make the five-
+hundred-mile trip. Now—now it was just a party. No peacock cockfights, no eunuch snake-
+charmers, no swimming pools, no flamingos.&lt;/p&gt;
+
+&lt;p&gt;“She must have run out of ideas,” Mrs. Bradstone told Mr. Bradstone knowingly. “Only
+so many new things in this world—she can’t keep doing something at every party forever.”
+Mr. Bradstone wasn’t convinced. “I think something could happen yet. She’s too invested
+in herself not to do anything,” he replied.&lt;/p&gt;
+
+&lt;p&gt;They argued quietly for a while, until Mrs. Bradstone exclaimed, “Would you look at
+that, she’s saying so herself!”&lt;/p&gt;
+
+&lt;p&gt;“The surprise is that there is no surprise,” Eleanor was telling everyone who would listen.&lt;/p&gt;
+
+&lt;p&gt;“Don’t you see? By doing something special at every party for the past three years, I’ve created
+an expectation of something spectacular. When nothing happens at all, your expectations aren’t
+met, and you feel taken aback. Isn’t it—”&lt;/p&gt;
+
+&lt;p&gt;A wine glass smashed into the ground with a resounding clank and startled everyone to
+silence.&lt;/p&gt;
+
+&lt;p&gt;“Where is the surprise?” Count Tybald roared.&lt;/p&gt;
+
+&lt;p&gt;Eleanor didn’t blink.&lt;/p&gt;
+
+&lt;p&gt;“As I was saying, there is none.” she said. “That’s the point. Would you be a dear and try
+to handle those wine glasses a tad more delicately? I understand they’re a bit fragile, but they’re
+imported from France, and I only have one set.”&lt;/p&gt;
+
+&lt;p&gt;The Count froze, arrested with arms raised and another wine glass in his hand. He slowly
+straightened, and his bulbous cheeks flushed a rosy pink.&lt;/p&gt;
+
+&lt;p&gt;“I traveled five-hundred miles for this,” he said. “Do you know who I am?”&lt;/p&gt;
+
+&lt;p&gt;“Count Tybald, of course.” Eleanor folded her arms. “Who do you think sent you that
+invitation?”&lt;/p&gt;
+
+&lt;p&gt;“Why, why—” the Count spluttered. “If your husband was here, I’d duel him right now
+for your impertinence.”&lt;/p&gt;
+
+&lt;p&gt;“I assure you, good count, that I intended no offense.” Eleanor smiled. “After
+all, it certainly wouldn’t do to get you into a temper.”&lt;/p&gt;
+
+&lt;p&gt;“Certainly not,” Tybald agreed. “Mrs. Moreau, you have a pretty voice. But I came here
+with a purpose, and it will take more than sweet music to make me merry.”
+Eleanor pursed her lips, but she said nothing.&lt;/p&gt;
+
+&lt;p&gt;“That’s what I thought, bitch.” Count Tybald abruptly smashed the wine glass still in his
+hand and started to walk away. Eleanor’s eyes narrowed.&lt;/p&gt;
+
+&lt;p&gt;“Wait,” she called. The count paused, and she said, “Do you really think you can waltz
+into my house, break my property, slander me to my face, and just walk away?”&lt;/p&gt;
+
+&lt;p&gt;He considered her, suddenly at a loss for words. Before he could measure a response,&lt;/p&gt;
+
+&lt;p&gt;Eleanor snapped, “I expect an apology, unless you’d prefer to duel.”&lt;/p&gt;
+
+&lt;p&gt;The grounds erupted into uproar. The sentiment was mixed—young men hooted, young
+ladies argued, and older folk reeled at the audacity. For a woman to duel—it was unthinkable.
+Under normal circumstances, it would never have flown. But it was a party, and the people
+wanted their entertainment, and many of those with better sense had gotten themselves well and
+thoroughly drunk. So the hooters drowned out the naysayers, and the matter was all but sealed.&lt;/p&gt;
+
+&lt;p&gt;It helped, perhaps, that the Count only drew the noose tighter around his own neck. He’d
+gotten himself into quite a predicament, not that he seemed to realize it. In a duel with a woman,
+there was no way to win. Striking a woman in public was taboo, so after folk recovered their
+senses, if he won, he’d be ridiculed. If he lost, he’d never live it down. For all that, he seemed
+quietly confident, and his lips twisted into what one might consider a smile.&lt;/p&gt;
+
+&lt;p&gt;“Madam, I’m afraid I meant everything I said,” Tybald said. “To thine own self be true,
+but if you insist on satisfaction, I’m perfectly happy to prove it.”&lt;/p&gt;
+
+&lt;p&gt;People rushed to prepare a dueling ground. Matters were usually not so hurried, but many
+were leaving the next day, and no one wanted to miss the event. A handsome young man named
+Boxer immediately volunteered to be Eleanor’s second; his brother Poxer didn’t move fast
+enough, and ended up consigned to Tybald. In the Colonies and the coastal towns, pistol duels
+had become all the rage. But this was the heart of England, so a servant fetched each combatant a
+long rapier. It all felt surreal to Eleanor, and suddenly she hesitated. It was real. It was happening
+now.&lt;/p&gt;
+
+&lt;p&gt;She’d discussed something like this with Richard, once. Gilbert had been away, and
+Richard had watched as she struggled into her morning dress. She’d made a point of ignoring
+him as she laced it together behind her back, but he didn’t respond in kind.&lt;/p&gt;
+
+&lt;p&gt;“We could leave,” he said.&lt;/p&gt;
+
+&lt;p&gt;Eleanor frowned. “&lt;em&gt;Richard,&lt;/em&gt;” she chided.&lt;/p&gt;
+
+&lt;p&gt;“You’re with him for the money. Maybe you had something once, but don’t try telling me
+there’s anything left.”&lt;/p&gt;
+
+&lt;p&gt;She fumbled with the last knot, and finally managed to pull it tight.&lt;/p&gt;
+
+&lt;p&gt;“Perhaps, but it doesn’t matter,” she said. “I can’t—”&lt;/p&gt;
+
+&lt;p&gt;“Doesn’t matter? Is that how much I mean to you? If—”&lt;/p&gt;
+
+&lt;p&gt;“I can’t just leave it all behind for you. I’m sorry Richard, but—”&lt;/p&gt;
+
+&lt;p&gt;“Of course you can. You could walk out that door and leave right now, and that fop
+wouldn’t know until he got back next month.”&lt;/p&gt;
+
+&lt;p&gt;She didn’t reply, picking up a brush to smooth out her hair so she could mold it into her
+standard French plaits.&lt;/p&gt;
+
+&lt;p&gt;“You don’t even have to do that if you don’t want to. Gilbert could just find out about
+us,” he said.&lt;/p&gt;
+
+&lt;p&gt;She looked at him in shock.&lt;/p&gt;
+
+&lt;p&gt;“We could let him find out about us,” he said. “You know what he would do.”&lt;/p&gt;
+
+&lt;p&gt;“No. He—”&lt;/p&gt;
+
+&lt;p&gt;“He’d think me some half-arsed peasant cuckold, and challenge me to a duel to protect
+his honor. I’d beat him, you know I would. I could kill him right there, and we’d be good to go.”&lt;/p&gt;
+
+&lt;p&gt;“And just like that, everything would work out?”&lt;/p&gt;
+
+&lt;p&gt;“Brevity is the soul of wit. Gilbert is predicable to a fault, so yes, it would work out.”&lt;/p&gt;
+
+&lt;p&gt;“No,” Eleanor snapped. “I won’t have it. My reputation is tied to the Moreau name, and
+I’ve worked too hard to just throw that away. You know people would judge us, you not so much
+as me. Besides, whose money do you think I’m paying you with? If you kill him, his relatives
+won’t let us keep anything. It’s better this way.”&lt;/p&gt;
+
+&lt;p&gt;“But—,” he began to protest, stopping as she angled her chin. He forced himself to meet
+her gaze.&lt;/p&gt;
+
+&lt;p&gt;“I suppose I can see the benefits of our present arrangement,” he said. As an afterthought,
+he added, “It’s a shame women aren’t allowed to duel. It would suit you, I think.”&lt;/p&gt;
+
+&lt;p&gt;She smirked. “I do many things I’m not allowed to do. If I wished to duel, I would.”&lt;/p&gt;
+
+&lt;p&gt;He studied her. “That’s what I’m talking about. You scare me a lot more than that shitless
+fop you call husband.”&lt;/p&gt;
+
+&lt;p&gt;“I’m glad I do. Perhaps we could arrange it sometime. The duel, that is.”&lt;/p&gt;
+
+&lt;p&gt;“Perhaps we can,” he said. “I’m willing to teach you—I think you’ll find it entertaining.”&lt;/p&gt;
+
+&lt;p&gt;She started to walk to the door, but he held up his hand.&lt;/p&gt;
+
+&lt;p&gt;“Eleanor, our present arrangement is enough for now,” he warned. “But eventually he needs to go,
+one way or another. Some Cupid kills with arrows, some with traps. I love you,
+Eleanor. I’m not sharing you forever.”&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;The duel was imminent, and the grounds seethed with excited conversation.&lt;/p&gt;
+
+&lt;p&gt;“That language, and to a lady at that,” Mrs. White scoffed. “That count, if he is one, is a
+disgrace to the nobility. I hope she gives it to him.”&lt;/p&gt;
+
+&lt;p&gt;“Does she really think she can duel?” Mr. Bradstone asked Mrs. Bradstone. “The lady has
+guts—I’ll give her that.”&lt;/p&gt;
+
+&lt;p&gt;“She’s gone barking mad,” Mrs. Bradstone replied. “Mark my words, nothing good will
+come out of this. You men and your duels, and now the ladies are joining in too.”&lt;/p&gt;
+
+&lt;p&gt;By virtue of his accomplishments as a lawyer, Mr. Bradstone was selected to arbitrate. At
+last Mr. Bradstone deemed the preparations complete, and he led Eleanor and Count Tybald to
+opposite ends of a makeshift dueling circle as the crowd thronged around. Men and women
+young and old found themselves hooked into formation like baited fish.&lt;/p&gt;
+
+&lt;p&gt;Both participants held their rapiers in front of them and bowed. “The duel will be to first
+blood,” Mr. Bradstone said. He brought his hand down in a sweeping gesture and shouted,
+“Begin!”&lt;/p&gt;
+
+&lt;p&gt;The crowd hushed and stilled as the combatants sprung into motion, for dueling was a
+gentlemen’s sport. Snaps of approval were appropriate, but it was unseemly to clap, whistle, or
+cheer until the match concluded. Even so, several sharp gasps carried on the breeze as Eleanor
+barely managed to block a sequence of aggressive thrusts from the Count.&lt;/p&gt;
+
+&lt;p&gt;Suddenly Tybald batted aside Eleanor’s blade with a violent blow. He struck again with a
+flourish as Eleanor jumped to the side and cut open her gown. He left himself open, and Eleanor
+drove right in. The blade impaled Tybald through the torso.&lt;/p&gt;
+
+&lt;p&gt;Tybald fell, and the crowd broke into raucous cheers and applause. Mr. Bradstone looked
+stunned.&lt;/p&gt;
+
+&lt;p&gt;After a moment, he remembered his duties and said, “Mrs. Moreau has drawn first blood.
+Victory goes to our host, Eleanor Moreau!”&lt;/p&gt;
+
+&lt;p&gt;As Eleanor was swarmed by cheers and well-wishers, Mr. Bradstone called over Mr.
+Debroix, an amateur physician, and together they bent over to examine the Count. Within a
+minute they had proclaimed him dead.&lt;/p&gt;
+
+&lt;p&gt;“That’ll show him how to treat a lady,” Mrs. White declared.&lt;/p&gt;
+
+&lt;p&gt;When Eleanor finally managed to break free, she rushed over. “He’s dead, isn’t he?” she
+asked.&lt;/p&gt;
+
+&lt;p&gt;“He is.” Mr. Bradstone wrung his hands.&lt;/p&gt;
+
+&lt;p&gt;“What a waste,” Eleanor sighed. “I’ll notify his family so they can bury him—I suppose I
+owe him that much. Fine man too.” Her eyes lingered on the corpse.&lt;/p&gt;
+
+&lt;p&gt;“Pardon?” Mr. Bradstone asked.&lt;/p&gt;
+
+&lt;p&gt;“Nothing. Thanks for officiating, Mr. Bradstone. I’ve got it from here.”&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;Eleanor stood atop the grave of the late Count Tybald. She checked no one was in sight,
+then sighed. She looked at the markings on the gravestone and pictured the body in it: the round
+face, the sculpted torso, the hands. She imagined his features once ruddy and full of life, but now
+cold and desiccating. She felt a strange sense of pity, both for the corpse and herself.&lt;/p&gt;
+
+&lt;p&gt;It was supposed to have been their tour de force. They’d choreographed a masterpiece of
+scandalous showmanship, with a duel and a dance and stunning acrobatics.&lt;/p&gt;
+
+&lt;p&gt;But he’d become a liability, and Eleanor couldn’t risk her reputation. That she no longer
+had to pay him was an inconsequential bonus—Gilbert wouldn’t notice the difference.&lt;/p&gt;
+
+&lt;p&gt;Eleanor bent over and placed a single white rose across the center of his grave, then stood
+and stepped back. “Thank you, Richard,” Eleanor said quietly. “I think this may have been the
+best surprise yet.”&lt;/p&gt;</content><author><name>Shreyas Balaji</name></author><summary type="html">When Eleanor Moreau threw a dinner party, everyone of note attended. There was a certain craft to being a hostess, and Eleanor had mastered it. She always seemed to know who would be in town—visiting socialites would have received invitations by post before they set out. Some attended for food, some for wine, and some for society. No one would say they attended for the surprise, for that would come far too close to the truth.</summary></entry><entry><title type="html">Freshman Year Thoughts</title><link href="https://shreyasbalaji.com/2018/05/25/freshman-year-thoughts" rel="alternate" type="text/html" title="Freshman Year Thoughts" /><published>2018-05-25T22:57:11-04:00</published><updated>2018-05-25T22:57:11-04:00</updated><id>https://shreyasbalaji.com/2018/05/25/freshman-year-thoughts</id><content type="html" xml:base="https://shreyasbalaji.com/2018/05/25/freshman-year-thoughts">&lt;p&gt;It’s strangely universal—how come May, students all around feel relief mixed with an acute sensation of ending, like that of a season passed—and they think to themselves &lt;em&gt;how the hell is the year already over.&lt;/em&gt; Yes, the year, for students from preschool through university consider their years from September through May. It’s a universal realization, and at the same time deeply personal.&lt;/p&gt;
 
 &lt;p&gt;And upon taking a moment to reflect, I manage to convince myself it’s true. &lt;em&gt;A year has passed me by.&lt;/em&gt; I know this not because people tell me so, not by the cold logic of my phone’s  lock-screen. I know this by attempting to remember it all, and realizing how much happened. One year, nine months, 270 days, 23728014.6155408 +/- 100000 seconds.&lt;/p&gt;
 
@@ -6,7 +344,7 @@
 
 &lt;p&gt;The end remains lucid and just below the surface. Finals, a battle between me and the page that after weeks of study leave me unsure of the winner, and here at the end not caring in the slightest. I’m done, and that’s all that matters. Packing, and my confrontation with a fact as inexorable as Newton’s fourth law, that &lt;em&gt;stuff accumulates.&lt;/em&gt; Wrapping mugs in towels, sitting on mattress toppers while taping boxes, and struggling with overweight suitcases. All the grocery bags I haven’t thrown go all at once, a bag in a bag in a bag as must be the natural order of things, a bag to contain another bag, a set another set, a life another life.&lt;/p&gt;
 
-&lt;p&gt;And the middle, that which contains everything important.&lt;/p&gt;</content><author><name>Shreyas Balaji</name></author><summary type="html">It’s strangely universal—how come May, students all around feel relief mixed with an acute sensation of ending, like that of a season passed—and they think to themselves how the hell is the year already over. Yes, the year, for students from preschool through university consider their years from September through May. It’s a universal realization, and at the same time deeply personal.</summary></entry><entry><title type="html">Introductory Blog Post</title><link href="/intro/blog-post/introductory-blog-post/" rel="alternate" type="text/html" title="Introductory Blog Post" /><published>2018-03-12T21:15:38-04:00</published><updated>2018-03-12T21:15:38-04:00</updated><id>/intro/blog-post/introductory-blog-post</id><content type="html" xml:base="/intro/blog-post/introductory-blog-post/">&lt;p&gt;You’ll find this post in your &lt;code class=&quot;highlighter-rouge&quot;&gt;_posts&lt;/code&gt; directory. Go ahead and edit it and re-build the site to see your changes. You can rebuild the site in many different ways, but the most common way is to run &lt;code class=&quot;highlighter-rouge&quot;&gt;jekyll serve&lt;/code&gt;, which launches a web server and auto-regenerates your site when a file is updated.&lt;/p&gt;
+&lt;p&gt;And the middle, that which contains everything important.&lt;/p&gt;</content><author><name>Shreyas Balaji</name></author><summary type="html">It’s strangely universal—how come May, students all around feel relief mixed with an acute sensation of ending, like that of a season passed—and they think to themselves how the hell is the year already over. Yes, the year, for students from preschool through university consider their years from September through May. It’s a universal realization, and at the same time deeply personal.</summary></entry><entry><title type="html">Introductory Blog Post</title><link href="https://shreyasbalaji.com/2018/03/12/introductory-blog-post" rel="alternate" type="text/html" title="Introductory Blog Post" /><published>2018-03-12T21:15:38-04:00</published><updated>2018-03-12T21:15:38-04:00</updated><id>https://shreyasbalaji.com/2018/03/12/introductory-blog-post</id><content type="html" xml:base="https://shreyasbalaji.com/2018/03/12/introductory-blog-post">&lt;p&gt;You’ll find this post in your &lt;code class=&quot;highlighter-rouge&quot;&gt;_posts&lt;/code&gt; directory. Go ahead and edit it and re-build the site to see your changes. You can rebuild the site in many different ways, but the most common way is to run &lt;code class=&quot;highlighter-rouge&quot;&gt;jekyll serve&lt;/code&gt;, which launches a web server and auto-regenerates your site when a file is updated.&lt;/p&gt;
 
 &lt;p&gt;To add new posts, simply add a file in the &lt;code class=&quot;highlighter-rouge&quot;&gt;_posts&lt;/code&gt; directory that follows the convention &lt;code class=&quot;highlighter-rouge&quot;&gt;YYYY-MM-DD-name-of-post.ext&lt;/code&gt; and includes the necessary front matter. Take a look at the source for this post to get an idea about how it works.&lt;/p&gt;
 

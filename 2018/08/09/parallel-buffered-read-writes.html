@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="My personal website :)">
+  <link href="https://fonts.googleapis.com/css?family=Lora:400,400italic,600,700|Open+Sans:300,400,600,700|Raleway:400,500" rel="stylesheet">
+  <link rel="shortcut icon" type="image/png" href="/images/swirl_32.png">
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link rel="stylesheet" href="/css/skeleton.css">
+  <link rel="stylesheet" href="/css/prism.css">
+  <script src="/js/prism.js"></script>
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="/js/script.js"></script><link type="application/atom+xml" rel="alternate" href="https://shreyasbalaji.com/feed.xml" title="Shreyas Balaji" /></head>
+
+<script src="//platform-api.sharethis.com/js/sharethis.js#property=5b6e53a204b9a500117b0d14&product=inline-share-buttons"></script>
+  <title>Parallel Buffered Read Writes</title>
+  <body>
+    <div class="full-body-general">
+      <div class="body-more-white">
+        <div class="container"><navbar id="navigation">
+  <div id="navigation-container">
+    <ul class="nav">
+
+      <div class="left-nav">
+        <li class="logo left-nav">
+          
+          <a href="/" style="-webkit-font-smoothing: antialiased;">Shreyas Balaji </a>
+          <span><img src="/images/swirl_32.png" height=25px style="vertical-align: middle; margin-top: -4px; margin-left: -3px;"></span>
+          
+        </li>
+      </div>
+
+      <div class="right-nav">
+        <li class="right-nav" onclick="location.href='/about/';">
+          About
+        </li>
+        <li class="right-nav">
+          <a href="#">Blog</a>
+        </li>
+      </div>
+
+    </ul>
+  </div>
+</navbar>
+
+<div id="navbar-end"></div>
+<main class="page-content" aria-label="Content">
+            <div class="wrapper">
+              <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Parallel Buffered Read Writes</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2018-08-09T00:00:00-04:00" itemprop="datePublished">Aug 9, 2018
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">By Shreyas Balaji</span></span></p>
+  </header>
+
+  <hr style="padding-bottom:.8rem; margin-top: 1rem; margin-bottom:0rem;">
+  <div class="sharethis-inline-share-buttons" style="margin-bottom: 8px;"></div><div class="post-categories"><a href="/category/computer-science/">
+        <button class="button-secondary">computer-science</button>
+      </a></div>
+    <img class="header-image" src="/images/eiffel_metal_art.jpg" width="100%"/>
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Until this summer, I’d never written a piece of code when file IO was the performance-limiting factor. Working with multi-terabyte datasets quickly disabused me of my innocence. It got to the point that I  was having to plan ahead to avoid unnecessary file copies.</p>
+
+<p>If I weren’t considering making a living in data science, I’d have to wonder if the hassle is worth it. High-end modern servers run on multiple terabytes of RAM, so perhaps soon enough the disk will be obsolete. Barring that, I’ll take what performance gains I can get.</p>
+
+<p>The single most important thing to do is <em>buffer</em>. Buffering is essentially reading and writing <em>in bulk</em>. It’s far more efficient to read a large file 64 kilobytes at a time than a character at a time. Most high-level languages somewhat transparently handle that for you, but of course at a low level it’s hard to beat the performance of properly buffered reads and writes into and out of byte buffers in a language like C/C++ or Java. The performance gain of buffering is mainly due to OS optimizations when you read/write large chunks of data sequentially from disk.</p>
+
+<p>You can look up the details of why it works, but before proceeding, let’s prove the performance difference is real. We’ll do this by comparing the performance difference between reading a  file in java one byte at a time vs. 64Kb at a time, using the relatively low-level FileInputStream.</p>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
+    <span class="n">File</span> <span class="n">testFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">"test.txt"</span><span class="o">);</span>    <span class="c1">// 100Gb of random text</span>
+    <span class="n">FileInputStream</span> <span class="n">testStream</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileInputStream</span><span class="o">(</span><span class="n">testFile</span><span class="o">);</span>
+    <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="mi">0</span><span class="o">;</span>
+    <span class="k">while</span> <span class="o">((</span><span class="n">result</span> <span class="o">=</span> <span class="n">testStream</span><span class="o">.</span><span class="na">read</span><span class="o">())</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">);</span>
+    <span class="n">testStream</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+<span class="o">}</span></code></pre></figure>
+
+
+  </div><a class="u-url" href="/2018/08/09/parallel-buffered-read-writes" hidden></a>
+</article>
+
+            </div>
+          </main>
+          <hr style="padding-bottom:.8rem; margin-bottom:.2rem;">
+
+          <div class="footercontainer"><div class="row">
+  <div class="three columns footer-left">
+    <p>
+      <a href="https://github.com/shreyasbalaji" target="_blank">
+        <img src="/images/github64.png" width="13" height="13" style="vertical-align: middle;"/>
+        GitHub
+      </a>
+      <br/>
+      <a href="https://www.linkedin.com/in/shreyas-balaji-1507b214a/" target="_blank">
+        <img src="/images/linkedin.svg" width="13" height="13" style="vertical-align: middle;"/>
+        LinkedIn
+      </a>
+    </p>
+  </div>
+  <div class="six columns footer-middle">
+    <p>
+      Copyright © 2018 Shreyas Balaji. My personal website and blog,
+      hosted on <a href="https://pages.github.com/">GitHub-Pages</a> 
+      and generated by <a href="https://jekyllrb.com/">Jekyll</a>.
+    </p>
+  </div>
+  <div class="three columns footer-right">
+    <p>
+      Shreyas Balaji<br/>
+      <a href="mailto:shreyasb99@gmail.com">shreyasb99@gmail.com</a>
+    </p>
+  </div>
+</div>
+</div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+</html>
+

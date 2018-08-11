@@ -86,8 +86,8 @@ function getTypedConfig(stringsElement) {
 
 var typed1 = null;
 punslist = [
-    "You should <b>never</b> trust atoms. They make up <b>everything</b>.",
-    "Don't room with a <b>tennis player</b>. You'll have to <b>sleep</b> past the <b>racket</b>.",
+    "You should <strong>never</strong> trust atoms. They make up <strong>everything</strong>.",
+    "Don't room with a <strong>tennis player</strong>. You'll have to <strong>sleep</strong> past the <strong>racket</strong>.",
 ];
 
 $(document).ready(function() {

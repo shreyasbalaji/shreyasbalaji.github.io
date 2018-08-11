@@ -55,6 +55,15 @@ pre[class*="language-"] {
 	overflow: auto;
 }
 
+@media (max-width: 550px) {
+  pre[class*="language-"] {
+      padding-left: 1.7em;
+      padding-right: 1.7em;
+  }
+}
+
+
+
 :not(pre) > code[class*="language-"],
 pre[class*="language-"] {
 	background: #f5f2f0;
