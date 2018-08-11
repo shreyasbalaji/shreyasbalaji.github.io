@@ -15,6 +15,7 @@
   <script src="/js/script.js"></script><link type="application/atom+xml" rel="alternate" href="https://shreyasbalaji.com/feed.xml" title="Shreyas Balaji" /></head>
 
 <script src="//platform-api.sharethis.com/js/sharethis.js#property=5b6e53a204b9a500117b0d14&product=inline-share-buttons"></script>
+  <script src="/js/posts.js"></script>
   <title>Parallel Buffered Read Writes</title>
   <body>
     <div class="full-body-general">
@@ -89,7 +90,7 @@ java SingleByteTest 2.72s user 3.13s system 98% cpu 5.916 total</code></pre></fi
 <figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
     <span class="kt">int</span> <span class="n">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">64</span><span class="o">;</span>
     <span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="n">BUFFER_SIZE</span><span class="o">];</span>
-    <span class="n">File</span> <span class="n">dictionaryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="n">args</span><span class="o">[</span><span class="mi">0</span><span class="o">]);</span>
+    <span class="n">File</span> <span class="n">dictionaryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">"dictionary.txt"</span><span class="o">);</span>
     <span class="n">InputStream</span> <span class="n">dictionaryStream</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileInputStream</span><span class="o">(</span><span class="n">dictionaryFile</span><span class="o">);</span>
     <span class="c1">// read the file BUFFER_SIZE bytes at a time</span>
     <span class="k">while</span> <span class="o">((</span><span class="n">dictionaryStream</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">buffer</span><span class="o">))</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">);</span>

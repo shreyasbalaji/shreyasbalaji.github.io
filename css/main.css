@@ -497,7 +497,3 @@ code {
     background: #fff;
     color: #000; } }
 /* Header Image */
-@media (max-width: 551px) {
-  .header-image {
-    margin-left: -30px;
-    width: 120% !important; } }
