@@ -482,7 +482,12 @@ code {
 /* Print
  * ----------------------------------------------- */
 @media print {
-  article-width: 700px !important; }
+  article-width: 100% !important; }
+@media print {
+  .sharethis-inline-share-buttons {
+    display: none;
+    visibility: hidden;
+    margin-top: -38px; } }
 @media print {
   .post-content p {
     text-indent: 2.5em !important;
