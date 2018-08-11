@@ -96,10 +96,10 @@ java SingleByteTest 2.72s user 3.13s system 98% cpu 5.916 total</code></pre></fi
     <span class="n">dictionaryStream</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
 <span class="o">}</span></code></pre></figure>
 
-<p>This one change brings the runtime down to 0.1 seconds–I guess you can call that an improvement.</p>
+<p>This one change brings the runtime down to 0.2 seconds–I guess you can call that an improvement.</p>
 
 <figure class="highlight"><pre><code class="language-sh" data-lang="sh"><span class="nv">$ </span><span class="nb">time </span>java BulkByteTest
-java BulkByteTest.txt 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figure>
+java BulkByteTest 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figure>
 
 
   </div><a class="u-url" href="/2018/08/09/parallel-buffered-read-writes" hidden></a>
