@@ -4,7 +4,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="theme-color" content="#0B9478">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="My personal website :)">
+  <meta name="description" content="Improving File IO performance by processing read buffers and writing output in parallel">
   <link href="https://fonts.googleapis.com/css?family=Lora:400,400italic,600,700|Open+Sans:300,400,600,700|Raleway:400,500" rel="stylesheet">
   <link rel="shortcut icon" type="image/png" href="/images/swirl_32.png">
   <link rel="stylesheet" href="/css/normalize.css">
@@ -83,7 +83,7 @@
 
 <p>And the results? A whopping 5.9 seconds to read a simple 3M file…</p>
 
-<figure class="highlight"><pre><code class="language-sh" data-lang="sh"><span class="nv">$ </span><span class="nb">time </span>java SingleByteTest
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span><span class="nb">time </span>java SingleByteTest
 java SingleByteTest 2.72s user 3.13s system 98% cpu 5.916 total</code></pre></figure>
 
 <p>So let’s be a bit smarter about this, and read more than a byte at a time.</p>
@@ -98,9 +98,9 @@ java SingleByteTest 2.72s user 3.13s system 98% cpu 5.916 total</code></pre></fi
     <span class="n">dictionaryStream</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
 <span class="o">}</span></code></pre></figure>
 
-<p>This one change brings the runtime down to 0.2 seconds–I guess you can call that an improvement.</p>
+<p>This one change brings the runtime down to 0.2 seconds–I <em>guess</em> you can call that an improvement.</p>
 
-<figure class="highlight"><pre><code class="language-sh" data-lang="sh"><span class="nv">$ </span><span class="nb">time </span>java BulkByteTest
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span><span class="nb">time </span>java BulkByteTest
 java BulkByteTest 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figure>
 
 
