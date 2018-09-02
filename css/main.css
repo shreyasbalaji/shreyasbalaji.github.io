@@ -518,3 +518,11 @@ code {
     background: #fff;
     color: #000; } }
 /* Header Image */
+/* Categories Listing */
+.listing-categories {
+  padding-right: 55px;
+  text-align: right;
+  margin-top: -16px; }
+
+.listing-categories a {
+  font-size: 14px; }

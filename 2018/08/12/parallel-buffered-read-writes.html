@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-123951775-1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-123951775-1');
+  </script>
+
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme-color" content="#0B9478">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Improving File IO performance by processing read buffers and writing output in parallel">
+  <link href="https://fonts.googleapis.com/css?family=Lora:400,400italic,600,700|Open+Sans:300,400,600,700|Raleway:400,500" rel="stylesheet">
+  <link rel="shortcut icon" type="image/png" href="/images/swirl_32.png">
+  <link rel="stylesheet" href="/css/normalize.css">
+  <link rel="stylesheet" href="/css/skeleton.css">
+  <link rel="stylesheet" href="/css/prism.css">
+  <script src="/js/prism.js"></script>
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="/js/script.js"></script><link type="application/atom+xml" rel="alternate" href="https://shreyasbalaji.com/feed.xml" title="Shreyas Balaji" /></head>
+
+<script src="//platform-api.sharethis.com/js/sharethis.js#property=5b6e53a204b9a500117b0d14&product=inline-share-buttons" async defer></script>
+  <script src="/js/posts.js"></script>
+  <title>Parallel Buffered Read Writes</title>
+  <body>
+    <div class="overlay-bg"></div>
+    <div class="body-more-white-overlay"></div>
+    <div class="full-body-general-fake">
+      <div class="body-more-white-fake">
+        <div class="container"><navbar id="navigation">
+  <div id="navigation-container">
+    <ul class="nav">
+
+      <div class="left-nav">
+        <li class="logo left-nav">
+          
+          <a href="/" style="-webkit-font-smoothing: antialiased;">Shreyas Balaji </a>
+          <span><img src="/images/swirl_32.png" height=25px style="vertical-align: middle; margin-top: -4px; margin-left: -3px;"></span>
+          
+        </li>
+      </div>
+
+      <div class="right-nav">
+        <li class="right-nav" onclick="location.href='/about/';">
+          About
+        </li>
+        <li class="right-nav" onclick="location.href='/blog/';">
+          Blog
+        </li>
+      </div>
+
+    </ul>
+  </div>
+</navbar>
+
+<div id="navbar-end"></div>
+<main class="page-content" aria-label="Content">
+            <div class="wrapper">
+              <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Parallel Buffered Read Writes</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2018-08-12T00:00:00-05:00" itemprop="datePublished">Aug 12, 2018
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">By Shreyas Balaji</span></span></p>
+  </header>
+
+  <hr style="padding-bottom:.8rem; margin-top: 1rem; margin-bottom:0rem;">
+  <div class="sharethis-inline-share-buttons" style="margin-bottom: 8px;"></div><div class="post-categories"><a href="/category/computer-science/">
+        <button class="button-secondary">computer-science</button>
+      </a></div>
+    <img class="header-image" src="/images/parallel.jpg" width="100%"/>
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Until this summer, I’d never written a piece of code where file IO was the performance-limiting factor. Working with multi-terabyte datasets quickly disabused me of my innocence. It got to the point that I  was having to plan ahead to avoid unnecessary file copies. So I quickly started looking, thinking to myself <em>how can I make this faster</em>?</p>
+
+<p>The single most important thing to do is <em>buffer</em>. Buffering is essentially reading and writing <em>in bulk</em>. It’s far more efficient to read a large file 64 kilobytes at a time than a character at a time. Most high-level languages somewhat transparently handle that for you, but of course at a low level it’s hard to beat the performance of properly buffered reads and writes into and out of byte buffers in a language like C/C++ or Java. The performance gain of buffering is mainly due to OS optimizations when you read/write large chunks of data sequentially from disk.</p>
+
+<h3 id="bulk-read-performance-test">Bulk Read Performance Test</h3>
+<p>You can look up the details of why it works, but before proceeding, let’s prove the performance difference is real. We’ll do this by comparing the performance difference between reading a file 1 byte vs. 64 kilobytes at a time, using the relatively low-level Java class <code class="highlighter-rouge">FileInputStream</code>. For our tests, we’ll use the file <code class="highlighter-rouge">dictionary.txt</code> (<a href="http://www.math.sjsu.edu/~foster/dictionary.txt">download here</a>), which is about 3 megabytes in total.</p>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
+    <span class="n">File</span> <span class="n">dictionaryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">"dictionary.txt"</span><span class="o">);</span>
+    <span class="n">InputStream</span> <span class="n">dictionaryStream</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileInputStream</span><span class="o">(</span><span class="n">dictionaryFile</span><span class="o">);</span>
+    <span class="c1">// read the file byte by byte</span>
+    <span class="k">while</span> <span class="o">((</span><span class="n">dictionaryStream</span><span class="o">.</span><span class="na">read</span><span class="o">())</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">);</span>
+    <span class="n">dictionaryStream</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+<span class="o">}</span></code></pre></figure>
+
+<p>And the results? A whopping 5.9 seconds to read a simple 3M file…</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span><span class="nb">time </span>java SingleByteTest
+java SingleByteTest 2.72s user 3.13s system 98% cpu 5.916 total</code></pre></figure>
+
+<p>So let’s be a bit smarter about this, and read more than a byte at a time.</p>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="o">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IOException</span> <span class="o">{</span>
+    <span class="kt">int</span> <span class="n">BUFFER_SIZE</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">64</span><span class="o">;</span>
+    <span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">byte</span><span class="o">[</span><span class="n">BUFFER_SIZE</span><span class="o">];</span>
+    <span class="n">File</span> <span class="n">dictionaryFile</span> <span class="o">=</span> <span class="k">new</span> <span class="n">File</span><span class="o">(</span><span class="s">"dictionary.txt"</span><span class="o">);</span>
+    <span class="n">InputStream</span> <span class="n">dictionaryStream</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FileInputStream</span><span class="o">(</span><span class="n">dictionaryFile</span><span class="o">);</span>
+    <span class="c1">// read the file BUFFER_SIZE bytes at a time</span>
+    <span class="k">while</span> <span class="o">((</span><span class="n">dictionaryStream</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">buffer</span><span class="o">))</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">);</span>
+    <span class="n">dictionaryStream</span><span class="o">.</span><span class="na">close</span><span class="o">();</span>
+<span class="o">}</span></code></pre></figure>
+
+<p>This one change brings the runtime down to 0.2 seconds–I <em>guess</em> you can call that an improvement.</p>
+
+<figure class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span><span class="nb">time </span>java BulkByteTest
+java BulkByteTest 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figure>
+
+<h3 id="idea-behind-parallelizing">Idea Behind Parallelizing</h3>
+<p>Obviously buffering is the most important thing we can do—nothing else we do hereafter will bring about that type of speed improvement. However, a lot of programs that have to handle big files tend to follow a similar design: read in the relevant portion of the file, process this data, and write the processed data to another file for future use. We’ll assume that the process is IO bound, so parallelizing makes sense. If the processing is where all the time is being eaten up and it’s not sequentially stateful (you don’t need to process all the previous contents of the file to process the next chunk), you can chunk the file or memory map it and process each chunk in parallel, but that’s for another discussion.</p>
+
+<p>In this read, process, and write design, notice that the read portion happens independently of the processing portion which happens indepently of the writing portion. So essentially, we want to create independent thread pools for each portion. Assuming the processing is sequentially stateful, we can have only one thread reading, processing, and writing at a time, but there’s nothing to say, for instance, that we can’t be reading and writing at the same time! Let’s see how we can implement this.</p>
+
+<h3 id="implementation">Implementation</h3>
+<p>Why don’t we dive straight into some code!</p>
+
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">InputStream</span> <span class="n">istream</span><span class="o">;</span>
+<span class="n">OutputStream</span> <span class="n">ostream</span><span class="o">;</span>
+<span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span><span class="o">,</span> <span class="n">otherBuffer</span><span class="o">;</span>
+<span class="n">Future</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span> <span class="n">process</span><span class="o">,</span> <span class="n">otherProcess</span><span class="o">;</span>
+
+<span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">read</span><span class="o">(</span><span class="n">InputStream</span> <span class="n">istream</span><span class="o">,</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span><span class="o">)</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">istream</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">buffer</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">handle</span><span class="o">(</span><span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// inplace process contents of buffer</span>
+<span class="o">}</span>
+
+<span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">write</span><span class="o">(</span><span class="n">OutputStream</span> <span class="n">ostream</span><span class="o">,</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">ostream</span><span class="o">.</span><span class="na">write</span><span class="o">(</span><span class="n">buffer</span><span class="o">);</span>
+<span class="o">}</span>
+
+<span class="c1">// Actually doing reading, processing, and writing</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">act</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">while</span> <span class="o">(</span><span class="n">read</span><span class="o">(</span><span class="n">istream</span><span class="o">,</span> <span class="n">buffer</span><span class="o">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">handle</span><span class="o">(</span><span class="n">buf</span><span class="o">);</span>
+        <span class="kt">byte</span><span class="o">[]</span> <span class="n">processBuffer</span> <span class="o">=</span> <span class="n">buffer</span><span class="o">;</span>
+        <span class="n">process</span> <span class="o">=</span> <span class="o">()</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="n">write</span><span class="o">(</span><span class="n">ostream</span><span class="o">,</span> <span class="n">processBuffer</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">otherProcess</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">otherProcess</span><span class="o">.</span><span class="na">end</span><span class="o">();</span>
+            <span class="n">otherProcess</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="n">otherProcess</span> <span class="o">=</span> <span class="n">process</span><span class="o">;</span>
+        <span class="kt">byte</span><span class="o">[]</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">buffer</span><span class="o">;</span>
+        <span class="n">buffer</span> <span class="o">=</span> <span class="n">otherBuffer</span><span class="o">;</span>
+        <span class="n">otherBuffer</span> <span class="o">=</span> <span class="n">tmp</span><span class="o">;</span>
+        <span class="n">process</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span></code></pre></figure>
+
+<hr style="margin-bottom: 0px;"/>
+    <h2 style="margin-top:16px;">Keep Reading</h2>
+    <ul class="posts posts-listing"><li>
+          <span class="post-date">Aug 28, 2018</span>
+          <a class="post-link" href="/2018/08/28/the-duel">The Duel</a>
+          <blockquote>
+            <p>When Eleanor Moreau threw a dinner party, everyone of note attended. There was a
+certain craft to being a hostess, and Eleanor had mastered it. She always seemed to know who
+would be in town—visiting socialites would have received invitations by post before they set
+out. Some attended for food, some for wine, and some for society. No one would say they
+attended for the surprise, for that would come far too close to the truth.</p>
+
+
+          </blockquote>
+          <div class="listing-categories"><a href="/category/fiction/">fiction</a>&nbsp;</div>
+        </li>
+    </ul></div>
+
+  
+</ul><a class="u-url" href="/2018/08/12/parallel-buffered-read-writes" hidden></a>
+</article>
+
+            </div>
+          </main>
+          <hr style="padding-bottom:.8rem; margin-bottom:.2rem;">
+
+          <div class="footercontainer"><div class="row">
+  <div class="three columns footer-left">
+    <p>
+      <a href="https://github.com/shreyasbalaji" target="_blank">
+        <img src="/images/github64.png" width="13" height="13" style="vertical-align: middle;"/>
+        GitHub
+      </a>
+      <br/>
+      <a href="https://www.linkedin.com/in/shreyas-balaji-1507b214a/" target="_blank">
+        <img src="/images/linkedin.svg" width="13" height="13" style="vertical-align: middle;"/>
+        LinkedIn
+      </a>
+    </p>
+  </div>
+  <div class="six columns footer-middle">
+    <p>
+      Copyright © 2018 Shreyas Balaji. My personal website and blog,
+      hosted on <a href="https://pages.github.com/">GitHub-Pages</a> 
+      and generated by <a href="https://jekyllrb.com/">Jekyll</a>.
+    </p>
+  </div>
+  <div class="three columns footer-right">
+    <p>
+      Shreyas Balaji<br/>
+      <a href="mailto:shreyasb99@gmail.com">shreyasb99@gmail.com</a>
+    </p>
+  </div>
+</div>
+</div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+</html>
+
