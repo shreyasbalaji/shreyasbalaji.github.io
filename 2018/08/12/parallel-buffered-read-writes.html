@@ -121,10 +121,11 @@ java BulkByteTest 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figu
 <h3 id="implementation">Implementation</h3>
 <p>Why don’t we dive straight into some code!</p>
 
-<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="n">InputStream</span> <span class="n">istream</span><span class="o">;</span>
-<span class="n">OutputStream</span> <span class="n">ostream</span><span class="o">;</span>
-<span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span><span class="o">,</span> <span class="n">otherBuffer</span><span class="o">;</span>
+<figure class="highlight"><pre><code class="language-java" data-lang="java"><span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span><span class="o">,</span> <span class="n">otherBuffer</span><span class="o">;</span>
 <span class="n">Future</span><span class="o">&lt;</span><span class="n">Void</span><span class="o">&gt;</span> <span class="n">process</span><span class="o">,</span> <span class="n">otherProcess</span><span class="o">;</span>
+<span class="n">Executor</span> <span class="n">executor</span><span class="o">;</span>
+<span class="n">InputStream</span> <span class="n">istream</span><span class="o">;</span>
+<span class="n">OutputStream</span> <span class="n">ostream</span><span class="o">;</span>
 
 <span class="kd">public</span> <span class="kd">static</span> <span class="kt">int</span> <span class="nf">read</span><span class="o">(</span><span class="n">InputStream</span> <span class="n">istream</span><span class="o">,</span> <span class="kt">byte</span><span class="o">[]</span> <span class="n">buffer</span><span class="o">)</span> <span class="o">{</span>
     <span class="k">return</span> <span class="n">istream</span><span class="o">.</span><span class="na">read</span><span class="o">(</span><span class="n">buffer</span><span class="o">);</span>
@@ -138,7 +139,7 @@ java BulkByteTest 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figu
     <span class="n">ostream</span><span class="o">.</span><span class="na">write</span><span class="o">(</span><span class="n">buffer</span><span class="o">);</span>
 <span class="o">}</span>
 
-<span class="c1">// Actually doing reading, processing, and writing</span>
+<span class="c1">// Actually handling the reading, processing, and writing</span>
 <span class="kd">public</span> <span class="kt">void</span> <span class="nf">act</span><span class="o">()</span> <span class="o">{</span>
     <span class="k">while</span> <span class="o">(</span><span class="n">read</span><span class="o">(</span><span class="n">istream</span><span class="o">,</span> <span class="n">buffer</span><span class="o">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="o">)</span> <span class="o">{</span>
         <span class="n">handle</span><span class="o">(</span><span class="n">buf</span><span class="o">);</span>
@@ -146,6 +147,7 @@ java BulkByteTest 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figu
         <span class="n">process</span> <span class="o">=</span> <span class="o">()</span> <span class="o">-&gt;</span> <span class="o">{</span>
             <span class="n">write</span><span class="o">(</span><span class="n">ostream</span><span class="o">,</span> <span class="n">processBuffer</span><span class="o">);</span>
         <span class="o">}</span>
+        <span class="n">executor</span><span class="o">.</span><span class="na">run</span><span class="o">(</span><span class="n">process</span><span class="o">);</span>
         <span class="k">if</span> <span class="o">(</span><span class="n">otherProcess</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="o">{</span>
             <span class="n">otherProcess</span><span class="o">.</span><span class="na">end</span><span class="o">();</span>
             <span class="n">otherProcess</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
@@ -157,6 +159,8 @@ java BulkByteTest 0.11s user 0.06s system 95% cpu 0.174 total</code></pre></figu
         <span class="n">process</span> <span class="o">=</span> <span class="kc">null</span><span class="o">;</span>
     <span class="o">}</span>
 <span class="o">}</span></code></pre></figure>
+
+<p>So what’s going on here? Futures are used to allow reads and writes to go on at the same time. Essentially, the main thread handles reading the <code class="highlighter-rouge">InputStream</code> into <code class="highlighter-rouge">buffer</code> and processing the data. Afterwards, a <code class="highlighter-rouge">Future</code> is created to write the buffer which is executed on another thread, and the main thread continues. We keep only two byte buffers to avoid unnecessary allocation—it’s all that’s needed since we never have multiple threads reading at the same time or multiple threads writing at the same time. However, note that one won’t suffice—we do need two buffers, so that the read process can read into a buffer while the write process is writing the old buffer.</p>
 
 <hr style="margin-bottom: 0px;"/>
     <h2 style="margin-top:16px;">Keep Reading</h2>
