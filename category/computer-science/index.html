@@ -70,7 +70,12 @@
       <span class="post-date">Aug 12, 2018</span>
       <a class="post-link" href="/2018/08/12/parallel-buffered-read-writes">Parallel Buffered Read Writes</a>
       <blockquote>
-        <p>Until this summer, I’d never written a piece of code where file IO was the performance-limiting factor. Working with multi-terabyte datasets quickly disabused me of my innocence. It got to the point that I  was having to plan ahead to avoid unnecessary file copies. So I quickly started looking, thinking to myself <em>how can I make this faster</em>?</p>
+        <p>Until this summer, I’d never written a piece of code where file IO was the
+performance-limiting factor. It’s often tempting to call file read-write times
+insignificant, but this notion certainly did not carry over to terabyte-sized
+datasets. It got to the point that I  was having to plan ahead to avoid
+unnecessary file copies. So I quickly started looking, thinking to myself <em>how
+can I make this faster</em>?</p>
 
 
       </blockquote>

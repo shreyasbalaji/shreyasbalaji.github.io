@@ -76,7 +76,12 @@
       </a></div>
     <img class="header-image" src="/images/parallel.jpg" width="100%"/>
   <div class="post-content e-content" itemprop="articleBody">
-    <p>Until this summer, I’d never written a piece of code where file IO was the performance-limiting factor. Working with multi-terabyte datasets quickly disabused me of my innocence. It got to the point that I  was having to plan ahead to avoid unnecessary file copies. So I quickly started looking, thinking to myself <em>how can I make this faster</em>?</p>
+    <p>Until this summer, I’d never written a piece of code where file IO was the
+performance-limiting factor. It’s often tempting to call file read-write times
+insignificant, but this notion certainly did not carry over to terabyte-sized
+datasets. It got to the point that I  was having to plan ahead to avoid
+unnecessary file copies. So I quickly started looking, thinking to myself <em>how
+can I make this faster</em>?</p>
 
 <p>The single most important thing to do is <em>buffer</em>. Buffering is essentially reading and writing <em>in bulk</em>. It’s far more efficient to read a large file 64 kilobytes at a time than a character at a time. Most high-level languages somewhat transparently handle that for you, but of course at a low level it’s hard to beat the performance of properly buffered reads and writes into and out of byte buffers in a language like C/C++ or Java. The performance gain of buffering is mainly due to OS optimizations when you read/write large chunks of data sequentially from disk.</p>
 
